@@ -79,7 +79,7 @@ func processMessage(msgBody string) {
 	if len(event.Records) > 0 {
 		videoKey := event.Records[0].S3.Object.Key
 		fmt.Printf("Processing video: %s\n", videoKey)
-		// FFMPEG Implementation for transcoding
+		// Spin ECS Container for ffmpeg transcoding
 	}
 }
 
