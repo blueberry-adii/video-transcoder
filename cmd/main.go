@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/url"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
-	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	ecsTypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	sqsTypes "github.com/aws/aws-sdk-go-v2/service/sqs/types"
@@ -81,34 +81,36 @@ func processMessage(msgBody string, ecsConfig *ecs.Client) {
 
 	if len(event.Records) > 0 {
 		videoKey := event.Records[0].S3.Object.Key
+		key, _ := url.QueryUnescape(videoKey)
 		fmt.Printf("Processing video: %s\n", videoKey)
 		// Spin ECS Container for ffmpeg transcoding
-		envVars := []types.KeyValuePair{
+		envVars := []ecsTypes.KeyValuePair{
 			{
 				Name:  aws.String("BUCKET"),
 				Value: aws.String(event.Records[0].S3.Bucket.Name),
 			},
 			{
 				Name:  aws.String("KEY"),
-				Value: aws.String(videoKey),
+				Value: aws.String(key),
 			},
 		}
 
 		input := &ecs.RunTaskInput{
 			Cluster:        aws.String("transcoder"),
-			TaskDefinition: aws.String("arn:aws:ecs:us-east-1:137110796336:task-definition/transcoder:1"),
+			TaskDefinition: aws.String("arn:aws:ecs:us-east-1:137110796336:task-definition/transcoder:2"),
 			LaunchType:     ecsTypes.LaunchTypeFargate,
-			Overrides: &types.TaskOverride{
-				ContainerOverrides: []types.ContainerOverride{
+			Overrides: &ecsTypes.TaskOverride{
+				ContainerOverrides: []ecsTypes.ContainerOverride{
 					{
 						Name:        aws.String("my-container"),
 						Environment: envVars,
 					},
 				},
 			},
-			NetworkConfiguration: &types.NetworkConfiguration{
-				AwsvpcConfiguration: &types.AwsVpcConfiguration{
-					Subnets: []string{"subnet-xxxxxxxx"},
+			NetworkConfiguration: &ecsTypes.NetworkConfiguration{
+				AwsvpcConfiguration: &ecsTypes.AwsVpcConfiguration{
+					Subnets:        []string{"subnet-0223e64311264a87d", "subnet-0dd59d6f622945c0e", "subnet-092ae77daa0fceecb"},
+					AssignPublicIp: ecsTypes.AssignPublicIpEnabled,
 				},
 			},
 			Count: aws.Int32(1),
