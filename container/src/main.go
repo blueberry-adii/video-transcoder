@@ -76,6 +76,14 @@ func main() {
 				log.Printf("Failed to upload %s: %v", fName, err)
 			} else {
 				fmt.Printf("Successfully uploaded %s\n", fName)
+				input := &s3.DeleteObjectInput{
+					Bucket: aws.String(bucket),
+					Key:    aws.String(key),
+				}
+				_, err := s3Client.DeleteObject(ctx, input)
+				if err != nil {
+					log.Printf("failed to delete object %s: %v", key, err)
+				}
 			}
 		}(fileName)
 	}

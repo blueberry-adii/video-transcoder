@@ -82,7 +82,7 @@ func processMessage(msgBody string, ecsConfig *ecs.Client) {
 	if len(event.Records) > 0 {
 		videoKey := event.Records[0].S3.Object.Key
 		key, _ := url.QueryUnescape(videoKey)
-		fmt.Printf("Processing video: %s\n", videoKey)
+		fmt.Printf("Processing video: %s\n", key)
 		// Spin ECS Container for ffmpeg transcoding
 		envVars := []ecsTypes.KeyValuePair{
 			{
