@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -11,16 +12,30 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 )
 
-// SqsActions encapsulates the Amazon Simple Queue Service (Amazon SQS) actions
-// used in the examples.
-type SqsActions struct {
-	SqsClient *sqs.Client
-}
-
 type Config struct {
 	url         string
 	maxMessages int32
 	waitTime    int32
+}
+
+type S3Event struct {
+	Records []struct {
+		S3 struct {
+			Bucket struct {
+				Name string `json:"name"`
+			} `json:"bucket"`
+			Object struct {
+				Key string `json:"key"`
+			} `json:"object"`
+		} `json:"s3"`
+	} `json:"Records"`
+	Event string `json:"Event"`
+}
+
+// SqsActions encapsulates the Amazon Simple Queue Service (Amazon SQS) actions
+// used in the examples.
+type SqsActions struct {
+	SqsClient *sqs.Client
 }
 
 // GetMessages uses the ReceiveMessage action to get messages from an Amazon SQS queue.
@@ -50,6 +65,22 @@ func (actor SqsActions) DeleteMessage(ctx context.Context, queueUrl string, rece
 	}
 
 	return err
+}
+
+func processMessage(msgBody string) {
+	var event S3Event
+	json.Unmarshal([]byte(msgBody), &event)
+
+	if event.Event == "s3:TestEvent" {
+		fmt.Println("Received S3 Test Event. Ignoring.")
+		return
+	}
+
+	if len(event.Records) > 0 {
+		videoKey := event.Records[0].S3.Object.Key
+		fmt.Printf("Processing video: %s\n", videoKey)
+		// FFMPEG Implementation for transcoding
+	}
 }
 
 // main uses the AWS SDK for Go V2 to create an Amazon Simple Queue Service
@@ -92,5 +123,7 @@ func main() {
 		if err != nil {
 			continue
 		}
+
+		processMessage(*msg.Body)
 	}
 }
