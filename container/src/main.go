@@ -68,7 +68,7 @@ func main() {
 
 			_, err = s3Client.PutObject(ctx, &s3.PutObjectInput{
 				Bucket: aws.String(destBucket),
-				Key:    aws.String("processed/" + fName),
+				Key:    aws.String(fmt.Sprintf("processed/%s/%s", key[7:len(key)-4], fName)),
 				Body:   file,
 			})
 
