@@ -17,6 +17,12 @@ type SqsActions struct {
 	SqsClient *sqs.Client
 }
 
+type Config struct {
+	url         string
+	maxMessages int32
+	waitTime    int32
+}
+
 // GetMessages uses the ReceiveMessage action to get messages from an Amazon SQS queue.
 func (actor SqsActions) GetMessages(ctx context.Context, queueUrl string, maxMessages int32, waitTime int32) ([]types.Message, error) {
 	var messages []types.Message
@@ -50,11 +56,14 @@ func main() {
 		SqsClient: sqs.NewFromConfig(sdkConfig),
 	}
 
-	var i int = 0
+	config := &Config{
+		url:         "https://sqs.us-east-1.amazonaws.com/137110796336/notification-blueberry",
+		maxMessages: 1,
+		waitTime:    20,
+	}
+
 	for {
-		log.Printf("Iteration %d", i)
-		i += 1
-		messages, err := sqsActions.GetMessages(ctx, "https://sqs.us-east-1.amazonaws.com/137110796336/notification-blueberry", 1, 5)
+		messages, err := sqsActions.GetMessages(ctx, config.url, config.maxMessages, config.waitTime)
 		if err != nil {
 			continue
 		}
