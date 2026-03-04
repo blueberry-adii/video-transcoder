@@ -34,11 +34,11 @@ func main() {
 	args := []string{
 		"-i", presignedReq.URL,
 
-		"-vf", "scale=-2:720", "-c:v", "libx264", "vid_720p.mp4",
+		"-vf", "scale=-2:720", "-c:v", "libx264", "-preset", "veryfast", "vid_720p.mp4",
 
-		"-vf", "scale=-2:480", "-c:v", "libx264", "vid_480p.mp4",
+		"-vf", "scale=-2:480", "-c:v", "libx264", "-preset", "veryfast", "vid_480p.mp4",
 
-		"-vf", "scale=-2:360", "-c:v", "libx264", "vid_360p.mp4",
+		"-vf", "scale=-2:360", "-c:v", "libx264", "-preset", "veryfast", "vid_360p.mp4",
 	}
 
 	cmd := exec.Command("ffmpeg", args...)
@@ -63,7 +63,7 @@ func main() {
 
 			_, err = s3Client.PutObject(ctx, &s3.PutObjectInput{
 				Bucket: aws.String(destBucket),
-				Key:    aws.String(key),
+				Key:    aws.String("processed/" + fName),
 				Body:   file,
 			})
 
