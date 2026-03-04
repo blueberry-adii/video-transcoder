@@ -39,6 +39,19 @@ func (actor SqsActions) GetMessages(ctx context.Context, queueUrl string, maxMes
 	return messages, err
 }
 
+func (actor SqsActions) DeleteMessage(ctx context.Context, queueUrl string, receiptHandle string) error {
+	_, err := actor.SqsClient.DeleteMessage(ctx, &sqs.DeleteMessageInput{
+		QueueUrl:      aws.String(queueUrl),
+		ReceiptHandle: aws.String(receiptHandle),
+	})
+
+	if err != nil {
+		log.Printf("Couldn't delete message from queue %v. Here's why: %v\n", queueUrl, err)
+	}
+
+	return err
+}
+
 // main uses the AWS SDK for Go V2 to create an Amazon Simple Queue Service
 // (Amazon SQS) client and list the queues in your account.
 // This example uses the default settings specified in your shared credentials
@@ -74,5 +87,10 @@ func main() {
 
 		msg := messages[0]
 		log.Printf("%s", *msg.Body)
+		err = sqsActions.DeleteMessage(ctx, config.url, *msg.ReceiptHandle)
+
+		if err != nil {
+			continue
+		}
 	}
 }
