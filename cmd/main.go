@@ -8,8 +8,11 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	ecsTypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
-	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
+	sqsTypes "github.com/aws/aws-sdk-go-v2/service/sqs/types"
 )
 
 type Config struct {
@@ -39,8 +42,8 @@ type SqsActions struct {
 }
 
 // GetMessages uses the ReceiveMessage action to get messages from an Amazon SQS queue.
-func (actor SqsActions) GetMessages(ctx context.Context, queueUrl string, maxMessages int32, waitTime int32) ([]types.Message, error) {
-	var messages []types.Message
+func (actor SqsActions) GetMessages(ctx context.Context, queueUrl string, maxMessages int32, waitTime int32) ([]sqsTypes.Message, error) {
+	var messages []sqsTypes.Message
 	result, err := actor.SqsClient.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
 		QueueUrl:            aws.String(queueUrl),
 		MaxNumberOfMessages: maxMessages,
@@ -67,7 +70,7 @@ func (actor SqsActions) DeleteMessage(ctx context.Context, queueUrl string, rece
 	return err
 }
 
-func processMessage(msgBody string) {
+func processMessage(msgBody string, ecsConfig *ecs.Client) {
 	var event S3Event
 	json.Unmarshal([]byte(msgBody), &event)
 
@@ -80,6 +83,43 @@ func processMessage(msgBody string) {
 		videoKey := event.Records[0].S3.Object.Key
 		fmt.Printf("Processing video: %s\n", videoKey)
 		// Spin ECS Container for ffmpeg transcoding
+		envVars := []types.KeyValuePair{
+			{
+				Name:  aws.String("BUCKET"),
+				Value: aws.String(event.Records[0].S3.Bucket.Name),
+			},
+			{
+				Name:  aws.String("KEY"),
+				Value: aws.String(videoKey),
+			},
+		}
+
+		input := &ecs.RunTaskInput{
+			Cluster:        aws.String("transcoder"),
+			TaskDefinition: aws.String("arn:aws:ecs:us-east-1:137110796336:task-definition/transcoder:1"),
+			LaunchType:     ecsTypes.LaunchTypeFargate,
+			Overrides: &types.TaskOverride{
+				ContainerOverrides: []types.ContainerOverride{
+					{
+						Name:        aws.String("my-container"),
+						Environment: envVars,
+					},
+				},
+			},
+			NetworkConfiguration: &types.NetworkConfiguration{
+				AwsvpcConfiguration: &types.AwsVpcConfiguration{
+					Subnets: []string{"subnet-xxxxxxxx"},
+				},
+			},
+			Count: aws.Int32(1),
+		}
+
+		result, err := ecsConfig.RunTask(context.TODO(), input)
+		if err != nil {
+			log.Fatalf("failed to run task: %v", err)
+		}
+
+		log.Printf("Task started: %s", *result.Tasks[0].TaskArn)
 	}
 }
 
@@ -106,6 +146,8 @@ func main() {
 		waitTime:    20,
 	}
 
+	ecsConfig := ecs.NewFromConfig(sdkConfig)
+
 	for {
 		messages, err := sqsActions.GetMessages(ctx, config.url, config.maxMessages, config.waitTime)
 		if err != nil {
@@ -124,6 +166,6 @@ func main() {
 			continue
 		}
 
-		processMessage(*msg.Body)
+		processMessage(*msg.Body, ecsConfig)
 	}
 }

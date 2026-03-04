@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -33,20 +34,24 @@ func main() {
 
 	args := []string{
 		"-i", presignedReq.URL,
-
 		"-vf", "scale=-2:720", "-c:v", "libx264", "-preset", "veryfast", "vid_720p.mp4",
-
 		"-vf", "scale=-2:480", "-c:v", "libx264", "-preset", "veryfast", "vid_480p.mp4",
-
 		"-vf", "scale=-2:360", "-c:v", "libx264", "-preset", "veryfast", "vid_360p.mp4",
 	}
 
 	cmd := exec.Command("ffmpeg", args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
 	err = cmd.Run()
+	if err != nil {
+		log.Fatalf("FFmpeg failed: %v\nStderr: %s", err, stderr.String())
+	}
+	log.Println("FFmpeg finished successfully. Starting uploads...")
 
 	outputFiles := []string{"vid_720p.mp4", "vid_480p.mp4", "vid_360p.mp4"}
 	var wg sync.WaitGroup
-	destBucket := "s3bucket"
+	destBucket := "result-blueberry"
 
 	for _, fileName := range outputFiles {
 		wg.Add(1)
