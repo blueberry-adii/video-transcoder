@@ -12,66 +12,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	ecsTypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
-	sqsTypes "github.com/aws/aws-sdk-go-v2/service/sqs/types"
+	"github.com/blueberry-adii/video-transcoder/internal/queue"
+	"github.com/blueberry-adii/video-transcoder/internal/storage"
 )
 
-type Config struct {
-	url         string
-	maxMessages int32
-	waitTime    int32
-}
-
-type S3Event struct {
-	Records []struct {
-		S3 struct {
-			Bucket struct {
-				Name string `json:"name"`
-			} `json:"bucket"`
-			Object struct {
-				Key string `json:"key"`
-			} `json:"object"`
-		} `json:"s3"`
-	} `json:"Records"`
-	Event string `json:"Event"`
-}
-
-// SqsActions encapsulates the Amazon Simple Queue Service (Amazon SQS) actions
-// used in the examples.
-type SqsActions struct {
-	SqsClient *sqs.Client
-}
-
-// GetMessages uses the ReceiveMessage action to get messages from an Amazon SQS queue.
-func (actor SqsActions) GetMessages(ctx context.Context, queueUrl string, maxMessages int32, waitTime int32) ([]sqsTypes.Message, error) {
-	var messages []sqsTypes.Message
-	result, err := actor.SqsClient.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
-		QueueUrl:            aws.String(queueUrl),
-		MaxNumberOfMessages: maxMessages,
-		WaitTimeSeconds:     waitTime,
-	})
-	if err != nil {
-		log.Printf("Couldn't get messages from queue %v. Here's why: %v\n", queueUrl, err)
-	} else {
-		messages = result.Messages
-	}
-	return messages, err
-}
-
-func (actor SqsActions) DeleteMessage(ctx context.Context, queueUrl string, receiptHandle string) error {
-	_, err := actor.SqsClient.DeleteMessage(ctx, &sqs.DeleteMessageInput{
-		QueueUrl:      aws.String(queueUrl),
-		ReceiptHandle: aws.String(receiptHandle),
-	})
-
-	if err != nil {
-		log.Printf("Couldn't delete message from queue %v. Here's why: %v\n", queueUrl, err)
-	}
-
-	return err
-}
-
 func processMessage(msgBody string, ecsConfig *ecs.Client) {
-	var event S3Event
+	var event storage.S3Event
 	json.Unmarshal([]byte(msgBody), &event)
 
 	if event.Event == "s3:TestEvent" {
@@ -138,20 +84,20 @@ func main() {
 		return
 	}
 
-	sqsActions := &SqsActions{
+	sqsActions := &queue.SqsActions{
 		SqsClient: sqs.NewFromConfig(sdkConfig),
 	}
 
-	config := &Config{
-		url:         "https://sqs.us-east-1.amazonaws.com/137110796336/notification-blueberry",
-		maxMessages: 1,
-		waitTime:    20,
+	config := &queue.Config{
+		Url:         "https://sqs.us-east-1.amazonaws.com/137110796336/notification-blueberry",
+		MaxMessages: 1,
+		WaitTime:    20,
 	}
 
 	ecsConfig := ecs.NewFromConfig(sdkConfig)
 
 	for {
-		messages, err := sqsActions.GetMessages(ctx, config.url, config.maxMessages, config.waitTime)
+		messages, err := sqsActions.GetMessages(ctx, config.Url, config.MaxMessages, config.WaitTime)
 		if err != nil {
 			continue
 		}
@@ -162,7 +108,7 @@ func main() {
 
 		msg := messages[0]
 		log.Printf("%s", *msg.Body)
-		err = sqsActions.DeleteMessage(ctx, config.url, *msg.ReceiptHandle)
+		err = sqsActions.DeleteMessage(ctx, config.Url, *msg.ReceiptHandle)
 
 		if err != nil {
 			continue
