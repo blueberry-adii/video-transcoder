@@ -87,6 +87,13 @@ func main() {
 			var contentType string
 			if strings.HasSuffix(fileName, ".m3u8") {
 				contentType = "application/x-mpegURL"
+				if fileName == "master.m3u8" {
+					content, _ := os.ReadFile(fileName)
+					newContent := strings.ReplaceAll(string(content), "RESOLUTION=1280x720", "RESOLUTION=1280x720,NAME=\"720p\"")
+					newContent = strings.ReplaceAll(newContent, "RESOLUTION=854x480", "RESOLUTION=854x480,NAME=\"480p\"")
+					newContent = strings.ReplaceAll(newContent, "RESOLUTION=640x360", "RESOLUTION=640x360,NAME=\"360p\"")
+					os.WriteFile(fileName, []byte(newContent), 0644)
+				}
 			} else if strings.HasSuffix(fileName, ".ts") {
 				contentType = "video/MP2T"
 			}

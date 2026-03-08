@@ -1,80 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HLS Adaptive Player</title>
-
     <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
-
-    <link href="https://unpkg.com/@silvermine/videojs-quality-selector/dist/css/quality-selector.css" rel="stylesheet">
-
     <style>
         body {
-            background-color: #1a1a1a;
+            background: #111;
             display: flex;
             justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: sans-serif;
+            padding-top: 50px;
         }
 
-        .container {
-            text-align: center;
-            color: white;
-        }
-
-        /* Ensures the gear icon is visible and white */
-        .vjs-quality-selector .vjs-menu-button-videojs-quality-selector {
-            display: block;
-        }
-
-        .video-js {
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        .vjs-quality-selector .vjs-menu-button {
+            margin-top: 0.2em;
         }
     </style>
 </head>
 
 <body>
 
-    <div class="container">
-        <h2>Video Transcoder Output</h2>
-
-        <video id="video-player" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto"
-            width="854" height="480">
-            <source src="https://result-blueberry.s3.us-east-1.amazonaws.com/processed/test/master.m3u8"
-                type="application/x-mpegURL">
-            <p class="vjs-no-js">
-                To view this video please enable JavaScript, and consider upgrading to a web browser that supports HTML5
-                video.
-            </p>
-        </video>
-    </div>
+    <video id="video-player" class="video-js vjs-default-skin vjs-big-play-centered" controls width="854" height="480">
+        <source src="https://result-blueberry.s3.us-east-1.amazonaws.com/processed/test/master.m3u8"
+            type="application/x-mpegURL">
+    </video>
 
     <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
 
-    <script src="https://unpkg.com/@silvermine/videojs-quality-selector/dist/js/quality-selector.min.js"></script>
+    <script
+        src="https://unpkg.com/videojs-contrib-quality-levels@4.1.0/dist/videojs-contrib-quality-levels.min.js"></script>
+
+    <script
+        src="https://unpkg.com/videojs-hls-quality-selector@2.0.0/dist/videojs-hls-quality-selector.min.js"></script>
 
     <script>
-        // Initialize the player
-        var player = videojs('video-player', {
-            fluid: false, // Set to true if you want it to be responsive
-            playbackRates: [0.5, 1, 1.5, 2]
+        var player = videojs('video-player');
+
+        // This links the UI to the names in your master.m3u8
+        player.hlsQualitySelector({
+            displayCurrentQuality: true,
         });
 
-        // Initialize the Quality Selector
-        player.controlBar.addChild('QualitySelector');
-
-        // Optional: Error logging to help you debug
-        player.on('error', function () {
-            console.log("Player Error: ", player.error());
+        // DEBUG: Check your console (F12) to see if the player is reading your names
+        player.ready(function () {
+            var qualityLevels = player.qualityLevels();
+            qualityLevels.on('addqualitylevel', function (event) {
+                console.log('Detected quality level:', event.qualityLevel.id, 'Label:', event.qualityLevel.label);
+            });
         });
     </script>
-
 </body>
 
 </html>
