@@ -1,6 +1,6 @@
-# GopherStream: Distributed Video Transcoding Pipeline
+# Video Transcoder - Distributed Video Transcoding Pipeline
 
-A high-performance, event driven video transcoding engine built using **Golang**, **FFmpeg**, and **AWS**. This system automatically processes raw mp4 video uploads into adaptive HLS streams (360p, 480p, 720p) using a decoupled, serverless focused architecture.
+A high performance, event driven video transcoding engine built using **Golang**, **FFmpeg**, and **AWS**. This system automatically processes raw mp4 video uploads into adaptive HLS streams (360p, 480p, 720p) using a decoupled, serverless focused architecture.
 
 ![](./assets/diagram.svg)
 
